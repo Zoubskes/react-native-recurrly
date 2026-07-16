@@ -19,7 +19,7 @@ const SubscriptionCard = ({ name, price, currency, icon, billing, color, categor
                             {name}
                         </Text>
                         <Text numberOfLines={1} ellipsizeMode="tail" 
-                        className=""sub-meta>
+                        className="sub-meta">
                             {category?.trim() || plan?.trim() || (renewalDate ? 
                                 formatSubscriptionDateTime(renewalDate) : '' )}
                         </Text>
@@ -39,7 +39,7 @@ const SubscriptionCard = ({ name, price, currency, icon, billing, color, categor
                                 <Text className="sub-label">Payment:</Text>
                                 <Text className="sub-value" numberOfLines={1}
                                 ellipsizeMode="tail">
-                                    {paymentMethod?.trim()}
+                                    {paymentMethod?.trim() ?? 'Not provided'}
                                 </Text>
                             </View>
                         </View>
@@ -48,7 +48,7 @@ const SubscriptionCard = ({ name, price, currency, icon, billing, color, categor
                                 <Text className="sub-label">Category:</Text>
                                 <Text className="sub-value" numberOfLines={1}
                                 ellipsizeMode="tail">
-                                    {category?.trim() || plan?.trim()}
+                                    {category?.trim() || plan?.trim() || 'Not provided'}
                                 </Text>
                             </View>
                         </View>
