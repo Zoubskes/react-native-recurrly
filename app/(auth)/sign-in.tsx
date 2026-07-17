@@ -1,5 +1,6 @@
 import { useSignIn } from "@clerk/expo";
 import { type Href, Link, useRouter } from "expo-router";
+import { posthog } from "../../src/config/posthog";
 import { styled } from "nativewind";
 import React, { useMemo, useState } from "react";
 import {
@@ -45,6 +46,15 @@ export default function SignIn() {
   }, [emailAddress, normalizedEmail, password]);
 
   const navigateAfterAuth = ({ session, decorateUrl }: any) => {
+    const userId = session?.user?.id;
+    if (userId) {
+      posthog.identify(userId, {
+        $set: { username: session?.user?.username },
+        $set_once: { first_sign_in_date: new Date().toISOString() },
+      });
+    }
+    posthog.capture('user_signed_in', { auth_method: 'email_password' });
+
     if (session?.currentTask) {
       router.replace(TASKS_ROUTE);
       return;
@@ -97,7 +107,10 @@ export default function SignIn() {
       password,
     });
 
-    if (error) return;
+    if (error) {
+      posthog.capture('sign_in_failed', { reason: error.message });
+      return;
+    }
     await completeSignIn();
   };
 

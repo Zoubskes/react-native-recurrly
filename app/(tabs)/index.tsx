@@ -1,4 +1,5 @@
 import { useUser } from "@clerk/expo";
+import { posthog } from "../../src/config/posthog";
 import ListHeading from "@/components/ListHeading";
 import SubscriptionCard from "@/components/SubscriptionCard";
 import UpcomingSubscriptionCard from "@/components/UpcomingSubscriptionCard";
@@ -73,12 +74,21 @@ export default function App() {
         data={HOME_SUBSCRIPTIONS} 
         keyExtractor={(item) => item.id}
         renderItem= {({ item}) => (
-        <SubscriptionCard { ... item } 
+        <SubscriptionCard { ... item }
         expanded={expandedSubscriptionId === item.id}
-        onPress={() => setExpandedSubscriptionId((currentId) =>
-        (currentId === item.id ? null : item.id))}
-        
-         /> 
+        onPress={() => {
+          const isExpanding = expandedSubscriptionId !== item.id;
+          setExpandedSubscriptionId((currentId) =>
+            (currentId === item.id ? null : item.id));
+          if (isExpanding) {
+            posthog.capture('subscription_card_expanded', {
+              subscription_id: item.id,
+              subscription_name: item.name,
+            });
+          }
+        }}
+
+         />
         )}
          extraData={expandedSubscriptionId}
          ItemSeparatorComponent={() => <View className="h-4" />}
