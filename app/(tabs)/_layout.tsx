@@ -1,18 +1,21 @@
-import { useAuth } from '@clerk/expo';
+import { useAuth, useSession } from '@clerk/expo';
 import { tabs } from '@/constants/data';
 import { colors, components } from '@/constants/theme';
 import clsx from 'clsx';
-import { Redirect, Tabs } from 'expo-router';
+import { type Href, Redirect, Tabs } from 'expo-router';
 import { Image, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const tabBar = components.tabBar;
+const TASKS_ROUTE = "/(auth)/tasks" as Href;
 
 const TabLayout = () => {
     const { isLoaded, isSignedIn } = useAuth();
+    const { session } = useSession();
     const insets = useSafeAreaInsets();
 
     if (!isLoaded) return null;
+    if (session?.currentTask) return <Redirect href={TASKS_ROUTE} />;
     if (!isSignedIn) return <Redirect href="/(auth)/sign-in" />;
 
     const TabIcon = ({focused, icon}: TabIconProps) => {

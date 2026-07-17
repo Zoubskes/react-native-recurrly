@@ -15,12 +15,13 @@ import {
 import { SafeAreaView as RNSafeAreaView } from "react-native-safe-area-context";
 
 const SafeAreaView = styled(RNSafeAreaView);
+const TASKS_ROUTE = "/(auth)/tasks" as Href;
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const getFieldError = (
   errors: ReturnType<typeof useSignUp>["errors"],
-  field: "emailAddress" | "password" | "code",
+  field: "emailAddress" | "username" | "password" | "code",
 ) => errors.fields[field]?.message;
 
 const formatMissingRequirements = (missingFields?: string[], unverifiedFields?: string[]) => {
@@ -59,8 +60,8 @@ export default function SignUp() {
   const formError = useMemo(() => {
     if (!emailAddress && !username && !password && !confirmPassword) return "";
     if (emailAddress && !emailPattern.test(normalizedEmail)) return "Enter a valid email address.";
-    if (username && !/^[a-z0-9_]{3,24}$/.test(normalizedUsername)) {
-      return "Use 3-24 letters, numbers, or underscores for your username.";
+    if (username && !/^[a-z0-9_]{4,64}$/.test(normalizedUsername)) {
+      return "Use 4-64 letters, numbers, or underscores for your username.";
     }
     if (password && password.length < 8) return "Password must be at least 8 characters.";
     if (confirmPassword && password !== confirmPassword) return "Passwords do not match.";
@@ -76,7 +77,7 @@ export default function SignUp() {
 
   const navigateAfterAuth = ({ session, decorateUrl }: any) => {
     if (session?.currentTask) {
-      setLocalError("Your account needs one more security step before continuing.");
+      router.replace(TASKS_ROUTE);
       return;
     }
 
@@ -97,8 +98,8 @@ export default function SignUp() {
       return;
     }
 
-    if (!/^[a-z0-9_]{3,24}$/.test(normalizedUsername)) {
-      setLocalError("Use 3-24 letters, numbers, or underscores for your username.");
+    if (!/^[a-z0-9_]{4,64}$/.test(normalizedUsername)) {
+      setLocalError("Use 4-64 letters, numbers, or underscores for your username.");
       return;
     }
 
@@ -120,7 +121,9 @@ export default function SignUp() {
 
     if (error) return;
 
-    await signUp.verifications.sendEmailCode();
+    const { error: sendEmailCodeError } = await signUp.verifications.sendEmailCode();
+    if (sendEmailCodeError) return;
+
     setIsVerifyingEmail(true);
   };
 
@@ -165,6 +168,7 @@ export default function SignUp() {
     localError ||
     formError ||
     getFieldError(errors, "emailAddress") ||
+    getFieldError(errors, "username") ||
     getFieldError(errors, "password") ||
     getFieldError(errors, "code");
 
@@ -274,7 +278,7 @@ export default function SignUp() {
                     autoCapitalize="none"
                     autoCorrect={false}
                     textContentType="username"
-                    className="auth-input"
+                    className={`auth-input ${getFieldError(errors, "username") ? "auth-input-error" : ""}`}
                   />
                 </View>
 

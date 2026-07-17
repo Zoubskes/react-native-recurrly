@@ -15,6 +15,7 @@ import {
 import { SafeAreaView as RNSafeAreaView } from "react-native-safe-area-context";
 
 const SafeAreaView = styled(RNSafeAreaView);
+const TASKS_ROUTE = "/(auth)/tasks" as Href;
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -45,7 +46,7 @@ export default function SignIn() {
 
   const navigateAfterAuth = ({ session, decorateUrl }: any) => {
     if (session?.currentTask) {
-      setLocalError("Your account needs one more security step before continuing.");
+      router.replace(TASKS_ROUTE);
       return;
     }
 
