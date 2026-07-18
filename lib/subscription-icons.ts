@@ -8,6 +8,8 @@ type IconRule = {
   icon: SubscriptionVectorIconName;
 };
 
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 const iconRules: IconRule[] = [
   { keywords: ["netflix"], icon: "netflix" },
   { keywords: ["spotify"], icon: "spotify" },
@@ -46,7 +48,9 @@ export const resolveSubscriptionIcon = (
   const searchableText = `${normalizedName} ${normalizedCategory ?? ""}`;
 
   const matchedRule = iconRules.find((rule) =>
-    rule.keywords.some((keyword) => searchableText.includes(keyword)),
+    rule.keywords.some((keyword) =>
+      new RegExp(`\\b${escapeRegExp(keyword)}\\b`, "i").test(searchableText),
+    ),
   );
 
   if (matchedRule) return matchedRule.icon;

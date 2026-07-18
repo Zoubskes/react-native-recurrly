@@ -1,5 +1,6 @@
 import SubscriptionCard from "@/components/SubscriptionCard";
 import { useSubscriptions } from "@/context/SubscriptionsContext";
+import { posthog } from "@/src/config/posthog";
 import { styled } from "nativewind";
 import React, { useMemo, useState } from "react";
 import { FlatList, Text, TextInput, View } from "react-native";
@@ -75,11 +76,18 @@ const Subscriptions = () => {
                     <SubscriptionCard
                         {...item}
                         expanded={expandedSubscriptionId === item.id}
-                        onPress={() =>
+                        onPress={() => {
+                            const isExpanding = expandedSubscriptionId !== item.id;
                             setExpandedSubscriptionId((currentId) =>
                                 currentId === item.id ? null : item.id,
-                            )
-                        }
+                            );
+                            if (isExpanding) {
+                                posthog.capture("subscription_card_expanded", {
+                                    subscription_id: item.id,
+                                    subscription_name: item.name,
+                                });
+                            }
+                        }}
                     />
                 )}
                 ItemSeparatorComponent={() => <View className="h-4" />}

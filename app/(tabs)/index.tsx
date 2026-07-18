@@ -43,7 +43,7 @@ export default function App() {
           onCreate={handleCreateSubscription}
         />
         <FlatList
-        ListHeaderComponent={() => (
+        ListHeaderComponent={
           <>
                 <View className="home-header">
         <View className="home-user">
@@ -85,7 +85,7 @@ export default function App() {
       </View>
           <ListHeading title="All Subscriptions"/>
           </>
-        )}
+        }
         data={subscriptions} 
         keyExtractor={(item) => item.id}
         renderItem= {({ item}) => (
