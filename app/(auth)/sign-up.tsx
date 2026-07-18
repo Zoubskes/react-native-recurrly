@@ -1,5 +1,6 @@
 import { useSignUp } from "@clerk/expo";
 import { type Href, Link, useRouter } from "expo-router";
+import { posthog } from "../../src/config/posthog";
 import { styled } from "nativewind";
 import React, { useMemo, useState } from "react";
 import {
@@ -76,6 +77,15 @@ export default function SignUp() {
   ]);
 
   const navigateAfterAuth = ({ session, decorateUrl }: any) => {
+    const userId = session?.user?.id;
+    if (userId) {
+      posthog.identify(userId, {
+        $set: { username: session?.user?.username },
+        $set_once: { sign_up_date: new Date().toISOString() },
+      });
+    }
+    posthog.capture('user_signed_up', { auth_method: 'email_password' });
+
     if (session?.currentTask) {
       router.replace(TASKS_ROUTE);
       return;
@@ -124,6 +134,7 @@ export default function SignUp() {
     const { error: sendEmailCodeError } = await signUp.verifications.sendEmailCode();
     if (sendEmailCodeError) return;
 
+    posthog.capture('sign_up_verification_sent', { auth_method: 'email_password' });
     setIsVerifyingEmail(true);
   };
 

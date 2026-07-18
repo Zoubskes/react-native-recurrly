@@ -1,6 +1,7 @@
 import { useClerk, useUser } from "@clerk/expo";
 import images from "@/constants/images";
 import { useRouter } from "expo-router";
+import { posthog } from "../../src/config/posthog";
 import { styled } from "nativewind";
 import React, { useState } from "react";
 import { ActivityIndicator, Image, Pressable, ScrollView, Text, View } from "react-native";
@@ -27,6 +28,8 @@ const Settings = () => {
         try {
             setError("");
             setIsSigningOut(true);
+            posthog.capture('user_signed_out');
+            posthog.reset();
             await signOut();
             router.replace("/(auth)/sign-in");
         } catch {
