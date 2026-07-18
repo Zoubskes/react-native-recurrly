@@ -1,4 +1,5 @@
 import type { ImageSourcePropType } from "react-native";
+import type { SubscriptionVectorIconName } from "@/lib/subscription-icons";
 
 declare global {
     interface AppTab {
@@ -15,6 +16,7 @@ declare global {
     interface Subscription {
         id: string;
         icon: ImageSourcePropType;
+        vectorIconName?: SubscriptionVectorIconName;
         name: string;
         plan?: string;
         category?: string;

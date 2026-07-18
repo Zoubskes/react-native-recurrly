@@ -6,6 +6,7 @@ import { SplashScreen, Stack, usePathname, useGlobalSearchParams } from "expo-ro
 import { useEffect, useRef } from "react";
 import { PostHogProvider } from "posthog-react-native";
 import { posthog } from "../src/config/posthog";
+import { SubscriptionsProvider } from "@/context/SubscriptionsContext";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -31,7 +32,9 @@ export default function RootLayout(){
 
     useEffect(() => {
         if(fontsLoaded){
-            SplashScreen.hideAsync();
+            SplashScreen.hideAsync().catch(() => {
+                // The splash can already be gone after fast refresh or native view remounts.
+            });
         }
     }, [fontsLoaded]);
 
@@ -58,7 +61,9 @@ export default function RootLayout(){
             }}
         >
             <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
-                <Stack screenOptions={{ headerShown: false }} />
+                <SubscriptionsProvider>
+                    <Stack screenOptions={{ headerShown: false }} />
+                </SubscriptionsProvider>
             </ClerkProvider>
         </PostHogProvider>
     )

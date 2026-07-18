@@ -1,8 +1,9 @@
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { formatCurrency, formatStatusLabel, formatSubscriptionDateTime } from "@/lib/utils";
 import clsx from "clsx";
 import { Image, Pressable, Text, View } from "react-native";
 
-const SubscriptionCard = ({ name, price, currency, icon, billing, color, category,
+const SubscriptionCard = ({ name, price, currency, icon, vectorIconName, billing, color, category,
     plan, renewalDate, expanded, onPress, paymentMethod, startDate, status
 }:
     SubscriptionCardProps
@@ -13,7 +14,13 @@ const SubscriptionCard = ({ name, price, currency, icon, billing, color, categor
             color} : undefined}>
             <View className="sub-head">
                 <View className="sub-main">
-                    <Image source={icon} className="sub-icon" />
+                    {vectorIconName ? (
+                        <View className="sub-icon items-center justify-center bg-background">
+                            <MaterialCommunityIcons name={vectorIconName} size={34} color="#081126" />
+                        </View>
+                    ) : (
+                        <Image source={icon} className="sub-icon" />
+                    )}
                     <View className="sub-copy">
                         <Text className="sub-title">
                             {name}
