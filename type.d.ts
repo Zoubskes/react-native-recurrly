@@ -41,6 +41,7 @@ declare global {
     interface UpcomingSubscription {
         id: string;
         icon: ImageSourcePropType;
+        vectorIconName?: SubscriptionVectorIconName;
         name: string;
         price: number;
         currency?: string;
@@ -52,6 +53,7 @@ declare global {
 
     interface ListHeadingProps {
         title: string;
+        onViewAllPress?: () => void;
     }
 }
 

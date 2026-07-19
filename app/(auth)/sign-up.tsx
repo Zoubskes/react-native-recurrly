@@ -91,7 +91,7 @@ export default function SignUp() {
       return;
     }
 
-    const url = decorateUrl("/(tabs)");
+    const url = decorateUrl("/onboarding");
     if (Platform.OS === "web" && url.startsWith("http")) {
       window.location.href = url;
       return;

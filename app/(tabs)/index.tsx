@@ -1,38 +1,76 @@
 import { useUser } from "@clerk/expo";
+import { useRouter } from "expo-router";
 import { posthog } from "../../src/config/posthog";
 import CreateSubscriptionModal from "@/components/CreateSubscriptionModal";
 import ListHeading from "@/components/ListHeading";
 import SubscriptionCard from "@/components/SubscriptionCard";
 import UpcomingSubscriptionCard from "@/components/UpcomingSubscriptionCard";
-import { HOME_BALANCE, UPCOMING_SUBSCRIPTIONS } from "@/constants/data";
+import { HOME_BALANCE } from "@/constants/data";
 import { icons } from "@/constants/icons";
 import images from "@/constants/images";
 import { useSubscriptions } from "@/context/SubscriptionsContext";
 import "@/global.css";
 import { formatCurrency } from "@/lib/utils";
+import { getUpcomingSubscriptions } from "@/lib/subscriptions";
 import dayjs from "dayjs";
 import { styled } from "nativewind";
-import { useState } from 'react';
-import { FlatList, Image, Pressable, Text, View } from "react-native";
+import { useMemo, useState } from 'react';
+import { Alert, FlatList, Image, Pressable, Text, View } from "react-native";
 import { SafeAreaView as RNSafeAreaView } from "react-native-safe-area-context";
 
 const SafeAreaView = styled(RNSafeAreaView);
 
 export default function App() {
+  const router = useRouter();
   const { user } = useUser();
-  const { subscriptions, addSubscription } = useSubscriptions();
+  const { subscriptions, addSubscription, deleteSubscription } = useSubscriptions();
   const [expandedSubscriptionId, setExpandedSubscriptionId] = useState<string | 
   null>(null);
   const [isCreateModalVisible, setIsCreateModalVisible] = useState(false);
+  const [deletingSubscriptionId, setDeletingSubscriptionId] = useState<string | null>(null);
   const displayName =
     user?.username ||
     user?.fullName ||
     user?.primaryEmailAddress?.emailAddress ||
     "Recurly";
   const avatarSource = user?.imageUrl ? { uri: user.imageUrl } : images.avatar;
-  const handleCreateSubscription = (subscription: Subscription) => {
-    addSubscription(subscription);
-    setExpandedSubscriptionId(subscription.id);
+  const upcomingSubscriptions = useMemo(
+    () => getUpcomingSubscriptions(subscriptions, 5),
+    [subscriptions],
+  );
+  const handleCreateSubscription = async (subscription: Parameters<typeof addSubscription>[0]) => {
+    const createdSubscription = await addSubscription(subscription);
+    setExpandedSubscriptionId(createdSubscription.id);
+  };
+
+  const handleDeleteSubscription = (subscription: Subscription) => {
+    Alert.alert(
+      "Delete subscription?",
+      `${subscription.name} will be removed from your subscriptions.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            setDeletingSubscriptionId(subscription.id);
+            try {
+              await deleteSubscription(subscription.id);
+              setExpandedSubscriptionId((currentId) =>
+                currentId === subscription.id ? null : currentId,
+              );
+            } catch (error) {
+              Alert.alert(
+                "Could not delete",
+                error instanceof Error ? error.message : "Please try again.",
+              );
+            } finally {
+              setDeletingSubscriptionId(null);
+            }
+          },
+        },
+      ],
+    );
   };
 
   return (
@@ -71,9 +109,12 @@ export default function App() {
 
       <View className= "mb-5">
         
-        <ListHeading title="Upcoming"/>
+        <ListHeading
+          title="Upcoming"
+          onViewAllPress={() => router.push("/(tabs)/subscriptions")}
+        />
         <FlatList 
-        data={UPCOMING_SUBSCRIPTIONS}
+        data={upcomingSubscriptions}
         renderItem={({item}) => (
           <UpcomingSubscriptionCard { ... item} />)}
           keyExtractor={(item) => item.id}
@@ -83,7 +124,10 @@ export default function App() {
           renewals yet.</Text>}
         />
       </View>
-          <ListHeading title="All Subscriptions"/>
+          <ListHeading
+            title="All Subscriptions"
+            onViewAllPress={() => router.push("/(tabs)/subscriptions")}
+          />
           </>
         }
         data={subscriptions} 
@@ -91,6 +135,8 @@ export default function App() {
         renderItem= {({ item}) => (
         <SubscriptionCard { ... item }
         expanded={expandedSubscriptionId === item.id}
+        isCancelling={deletingSubscriptionId === item.id}
+        onCancelPress={() => handleDeleteSubscription(item)}
         onPress={() => {
           const isExpanding = expandedSubscriptionId !== item.id;
           setExpandedSubscriptionId((currentId) =>

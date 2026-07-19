@@ -1,5 +1,7 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { useSubscriptions } from "@/context/SubscriptionsContext";
+import { getNextRenewalDate, getSubscriptionBillingPeriod } from "@/lib/subscriptions";
 import { formatCurrency } from "@/lib/utils";
 import dayjs from "dayjs";
 import { styled } from "nativewind";
@@ -9,12 +11,13 @@ import { SafeAreaView as RNSafeAreaView } from "react-native-safe-area-context";
 const SafeAreaView = styled(RNSafeAreaView);
 
 const Insights = () => {
+    const router = useRouter();
     const { subscriptions } = useSubscriptions();
     const today = dayjs();
     const monthLabel = today.format("MMMM YYYY");
     const activeSubscriptions = subscriptions.filter((subscription) => subscription.status !== "cancelled");
     const monthlyTotal = activeSubscriptions.reduce((total, subscription) => {
-        const multiplier = subscription.billing.toLowerCase() === "yearly" ? 1 / 12 : 1;
+        const multiplier = getSubscriptionBillingPeriod(subscription) === "yearly" ? 1 / 12 : 1;
         return total + subscription.price * multiplier;
     }, 0);
     const previousMonthTotal = monthlyTotal * 0.88;
@@ -25,7 +28,7 @@ const Insights = () => {
     const upcomingDays = Array.from({ length: 7 }, (_, index) => {
         const day = today.add(index, "day");
         const total = activeSubscriptions
-            .filter((subscription) => dayjs(subscription.renewalDate).isSame(day, "day"))
+            .filter((subscription) => getNextRenewalDate(subscription, today)?.isSame(day, "day"))
             .reduce((sum, subscription) => sum + subscription.price, 0);
 
         return {
@@ -59,7 +62,10 @@ const Insights = () => {
 
                 <View className="mb-4 flex-row items-center justify-between">
                     <Text className="text-2xl font-sans-bold text-primary">Upcoming</Text>
-                    <Pressable className="rounded-full border border-border bg-card px-4 py-2">
+                    <Pressable
+                        className="rounded-full border border-border bg-card px-4 py-2"
+                        onPress={() => router.push("/(tabs)/subscriptions")}
+                    >
                         <Text className="font-sans-bold text-primary">View all</Text>
                     </Pressable>
                 </View>
@@ -81,7 +87,9 @@ const Insights = () => {
                         <View className="h-48 flex-1 flex-row items-end justify-between pl-2">
                             {upcomingDays.map((day) => {
                                 const isHighlighted = day.key === highlightedDay.key && day.total > 0;
-                                const barHeight = Math.max(10, (day.total / maxUpcomingTotal) * 168);
+                                const barHeight = day.total > 0
+                                    ? Math.max(12, Math.min(168, (day.total / maxUpcomingTotal) * 168))
+                                    : 6;
 
                                 return (
                                     <View key={day.key} className="items-center">
@@ -132,7 +140,10 @@ const Insights = () => {
 
                 <View className="mb-4 flex-row items-center justify-between">
                     <Text className="text-2xl font-sans-bold text-primary">History</Text>
-                    <Pressable className="rounded-full border border-border bg-card px-4 py-2">
+                    <Pressable
+                        className="rounded-full border border-border bg-card px-4 py-2"
+                        onPress={() => router.push("/(tabs)/subscriptions")}
+                    >
                         <Text className="font-sans-bold text-primary">View all</Text>
                     </Pressable>
                 </View>
@@ -173,7 +184,7 @@ const Insights = () => {
                                         {formatCurrency(subscription.price, subscription.currency)}
                                     </Text>
                                     <Text className="mt-1 text-sm font-sans-semibold text-muted-foreground">
-                                        per {subscription.billing.toLowerCase() === "yearly" ? "year" : "month"}
+                                        per {getSubscriptionBillingPeriod(subscription) === "yearly" ? "year" : "month"}
                                     </Text>
                                 </View>
                             </View>

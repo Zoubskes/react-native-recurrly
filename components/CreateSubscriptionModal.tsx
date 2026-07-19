@@ -1,5 +1,4 @@
-import { icons } from "@/constants/icons";
-import { resolveSubscriptionIcon } from "@/lib/subscription-icons";
+import type { CreateSubscriptionInput } from "@/lib/api";
 import { posthog } from "@/src/config/posthog";
 import clsx from "clsx";
 import dayjs from "dayjs";
@@ -33,7 +32,7 @@ type Category = (typeof categories)[number];
 type CreateSubscriptionModalProps = {
   visible: boolean;
   onClose: () => void;
-  onCreate: (subscription: Subscription) => void;
+  onCreate: (subscription: CreateSubscriptionInput) => Promise<void> | void;
 };
 
 const categoryColors: Record<Category, string> = {
@@ -50,16 +49,20 @@ const categoryColors: Record<Category, string> = {
 const CreateSubscriptionModal = ({ visible, onClose, onCreate }: CreateSubscriptionModalProps) => {
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("");
   const [frequency, setFrequency] = useState<Frequency>("Monthly");
   const [category, setCategory] = useState<Category>("Entertainment");
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const resetForm = () => {
     setName("");
     setPrice("");
+    setPaymentMethod("");
     setFrequency("Monthly");
     setCategory("Entertainment");
     setError("");
+    setIsSubmitting(false);
   };
 
   const handleClose = () => {
@@ -67,7 +70,9 @@ const CreateSubscriptionModal = ({ visible, onClose, onCreate }: CreateSubscript
     onClose();
   };
 
-  const handleSubmit = () => {
+  const getApiCategory = (value: Category) => (value === "Entertainment" ? "Entertainment" : "Other");
+
+  const handleSubmit = async () => {
     const normalizedName = name.trim();
     const parsedPrice = Number.parseFloat(price.replace(",", "."));
 
@@ -85,35 +90,39 @@ const CreateSubscriptionModal = ({ visible, onClose, onCreate }: CreateSubscript
     const renewalDate =
       frequency === "Monthly" ? startDate.add(1, "month") : startDate.add(1, "year");
 
-    onCreate({
-      id: `${normalizedName.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${Date.now()}`,
-      name: normalizedName,
-      price: parsedPrice,
-      frequency,
-      category,
-      status: "active",
-      startDate: startDate.toISOString(),
-      renewalDate: renewalDate.toISOString(),
-      icon: icons.wallet,
-      vectorIconName: resolveSubscriptionIcon(normalizedName, category),
-      billing: frequency,
-      color: categoryColors[category],
-      currency: "USD",
-      plan: frequency,
-    });
+    setIsSubmitting(true);
 
-    posthog.capture("subscription_created", {
-      subscription_name: normalizedName,
-      subscription_price: parsedPrice,
-      subscription_frequency: frequency,
-      subscription_category: category,
-    });
-    resetForm();
-    onClose();
+    try {
+      await onCreate({
+        name: normalizedName,
+        price: parsedPrice,
+        frequency: frequency.toLowerCase(),
+        category: getApiCategory(category),
+        startDate: startDate.toISOString(),
+        renewalDate: renewalDate.toISOString(),
+        color: categoryColors[category],
+        currency: "USD",
+        paymentMethod: paymentMethod.trim() || "Not provided",
+      });
+
+      posthog.capture("subscription_created", {
+        subscription_name: normalizedName,
+        subscription_price: parsedPrice,
+        subscription_frequency: frequency,
+        subscription_category: category,
+      });
+      resetForm();
+      onClose();
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : "Could not create subscription.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const parsedPrice = Number.parseFloat(price.replace(",", "."));
-  const isSubmitDisabled = !name.trim() || !Number.isFinite(parsedPrice) || parsedPrice <= 0;
+  const isSubmitDisabled =
+    isSubmitting || !name.trim() || !Number.isFinite(parsedPrice) || parsedPrice <= 0;
 
   return (
     <Modal
@@ -160,6 +169,17 @@ const CreateSubscriptionModal = ({ visible, onClose, onCreate }: CreateSubscript
                 placeholder="12.99"
                 placeholderTextColor="rgba(0,0,0,0.45)"
                 keyboardType="decimal-pad"
+                className="auth-input"
+              />
+            </View>
+
+            <View className="auth-field">
+              <Text className="auth-label">Payment method</Text>
+              <TextInput
+                value={paymentMethod}
+                onChangeText={setPaymentMethod}
+                placeholder="Visa ending in 8530"
+                placeholderTextColor="rgba(0,0,0,0.45)"
                 className="auth-input"
               />
             </View>
@@ -223,7 +243,9 @@ const CreateSubscriptionModal = ({ visible, onClose, onCreate }: CreateSubscript
               disabled={isSubmitDisabled}
               onPress={handleSubmit}
             >
-              <Text className="auth-button-text">Create subscription</Text>
+              <Text className="auth-button-text">
+                {isSubmitting ? "Creating..." : "Create subscription"}
+              </Text>
             </Pressable>
           </ScrollView>
         </View>
