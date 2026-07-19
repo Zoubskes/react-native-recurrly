@@ -4,7 +4,7 @@ import clsx from "clsx";
 import { Image, Pressable, Text, View } from "react-native";
 
 const SubscriptionCard = ({ name, price, currency, icon, vectorIconName, billing, color, category,
-    plan, renewalDate, expanded, onPress, paymentMethod, startDate, status
+    plan, renewalDate, expanded, onPress, paymentMethod, startDate, status, onCancelPress, isCancelling
 }:
     SubscriptionCardProps
 ) => {
@@ -39,7 +39,7 @@ const SubscriptionCard = ({ name, price, currency, icon, vectorIconName, billing
             </View>
         
             {expanded && (
-                <View className="sub-bdy">
+                <View className="sub-body">
                     <View className="sub-details">
                         <View className="sub-row">
                             <View className="sub-row-copy">
@@ -87,6 +87,20 @@ const SubscriptionCard = ({ name, price, currency, icon, vectorIconName, billing
                             </View>
                         </View>
                     </View>
+                    {onCancelPress ? (
+                        <Pressable
+                            className={clsx("sub-cancel", isCancelling && "sub-cancel-disabled")}
+                            disabled={isCancelling}
+                            onPress={(event) => {
+                                event.stopPropagation();
+                                onCancelPress();
+                            }}
+                        >
+                            <Text className="sub-cancel-text">
+                                {isCancelling ? "Deleting..." : "Delete Subscription"}
+                            </Text>
+                        </Pressable>
+                    ) : null}
                 </View>
             )}
         </Pressable>

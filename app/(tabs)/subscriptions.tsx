@@ -3,7 +3,7 @@ import { useSubscriptions } from "@/context/SubscriptionsContext";
 import { posthog } from "@/src/config/posthog";
 import { styled } from "nativewind";
 import React, { useMemo, useState } from "react";
-import { FlatList, Text, TextInput, View } from "react-native";
+import { Alert, FlatList, Text, TextInput, View } from "react-native";
 import { SafeAreaView as RNSafeAreaView } from "react-native-safe-area-context";
 
 const SafeAreaView = styled(RNSafeAreaView);
@@ -40,7 +40,8 @@ SubscriptionsHeader.displayName = "SubscriptionsHeader";
 const Subscriptions = () => {
     const [query, setQuery] = useState("");
     const [expandedSubscriptionId, setExpandedSubscriptionId] = useState<string | null>(null);
-    const { subscriptions } = useSubscriptions();
+    const [deletingSubscriptionId, setDeletingSubscriptionId] = useState<string | null>(null);
+    const { subscriptions, deleteSubscription } = useSubscriptions();
 
     const filteredSubscriptions = useMemo(() => {
         const normalizedQuery = query.trim().toLowerCase();
@@ -64,6 +65,36 @@ const Subscriptions = () => {
         });
     }, [query, subscriptions]);
 
+    const handleDeleteSubscription = (subscription: Subscription) => {
+        Alert.alert(
+            "Delete subscription?",
+            `${subscription.name} will be removed from your subscriptions.`,
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Delete",
+                    style: "destructive",
+                    onPress: async () => {
+                        setDeletingSubscriptionId(subscription.id);
+                        try {
+                            await deleteSubscription(subscription.id);
+                            setExpandedSubscriptionId((currentId) =>
+                                currentId === subscription.id ? null : currentId,
+                            );
+                        } catch (error) {
+                            Alert.alert(
+                                "Could not delete",
+                                error instanceof Error ? error.message : "Please try again.",
+                            );
+                        } finally {
+                            setDeletingSubscriptionId(null);
+                        }
+                    },
+                },
+            ],
+        );
+    };
+
     return (
         <SafeAreaView className="flex-1 bg-background p-5">
             <FlatList
@@ -76,6 +107,8 @@ const Subscriptions = () => {
                     <SubscriptionCard
                         {...item}
                         expanded={expandedSubscriptionId === item.id}
+                        isCancelling={deletingSubscriptionId === item.id}
+                        onCancelPress={() => handleDeleteSubscription(item)}
                         onPress={() => {
                             const isExpanding = expandedSubscriptionId !== item.id;
                             setExpandedSubscriptionId((currentId) =>
